@@ -326,7 +326,7 @@ def run_app():
 # Try and matchmake remainder of students of best
     st.divider()
     st.subheader("Matchmake remainder students")
-    st.markdown("Try different **min/max group sizes** on the same remainder pool (no need to re-run Build groups). Each run uses the list below and shows a new grouping.")
+    st.markdown("Try different **min/max group sizes** on the same remainder pool")
 
     remainder_pool = st.session_state.get("remainder_pool", [])
     remainder_groups = st.session_state.get("remainder_groups", [])
