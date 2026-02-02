@@ -154,7 +154,11 @@ def greedy_group_remainder(
             common = common & schedules.get(best_candidate, set())
             unplaced.remove(best_candidate)
 
-        if min_group_size <= len(group_netids) <= max_group_size:
+        # Only add as a group if at least 2 people (never export a "group" of 1)
+        if (
+            len(group_netids) >= 2
+            and min_group_size <= len(group_netids) <= max_group_size
+        ):
             remainder_groups.append((group_netids, common))
         else:
             unplaced.extend(group_netids)
@@ -177,7 +181,11 @@ def build_export_df(
 ) -> pd.DataFrame:
 # Export FM
     rows = []
+    # Only export groups with 2+ members; put singletons in manual review
     for i, (members, common) in enumerate(groups, start=1):
+        if len(members) < 2:
+            manual_review = list(manual_review) + members
+            continue
         common_str = "; ".join(format_common_slots(common))
         for netid in members:
             rows.append({
@@ -189,6 +197,9 @@ def build_export_df(
             })
     if remainder_groups:
         for i, (members, common) in enumerate(remainder_groups, start=1):
+            if len(members) < 2:
+                manual_review = list(manual_review) + members
+                continue
             common_str = "; ".join(format_common_slots(common))
             for netid in members:
                 rows.append({
