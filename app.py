@@ -212,7 +212,6 @@ def build_export_df(
 def run_app():
     st.set_page_config(page_title="Student Group Matchmaking", layout="wide")
     st.title("Student Group Matchmaking by Schedule Overlap")
-    st.markdown("Upload the **Form Responses** CSV. Groups are formed so that every member shares the **exact same** time-slot strings on the same day (e.g. \"4pm-5pm ET\").")
 
     uploaded = st.file_uploader("Upload Form Responses CSV", type=["csv"])
 
