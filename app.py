@@ -211,7 +211,7 @@ def build_export_df(
 
 def run_app():
     st.set_page_config(page_title="Student Group Matchmaking", layout="wide")
-    st.title("Student Group Matchmaking by Schedule Overlap")
+    st.title("Student Group Matchmaking")
 
     uploaded = st.file_uploader("Upload Form Responses CSV", type=["csv"])
 
