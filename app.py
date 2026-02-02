@@ -1,19 +1,13 @@
-"""
-Student Group Formation by Schedule Overlap
-Uses exact time-string matching and greedy grouping.
-"""
-
 import re
 import io
 import pandas as pd
 import streamlit as st
 
-# Day names for detecting schedule columns (order preserved for display)
+# Day names
 WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
 def clean_netid(raw: str) -> str:
-    """Lowercase and remove @vols.utk.edu from NetID."""
     if pd.isna(raw) or not isinstance(raw, str):
         return ""
     s = str(raw).strip().lower()
@@ -22,7 +16,6 @@ def clean_netid(raw: str) -> str:
 
 
 def find_netid_column(df: pd.DataFrame) -> str | None:
-    """Find column whose name suggests NetID (e.g. 'What is your NetID?')."""
     for col in df.columns:
         if "netid" in str(col).lower():
             return col
@@ -30,7 +23,6 @@ def find_netid_column(df: pd.DataFrame) -> str | None:
 
 
 def find_day_columns(df: pd.DataFrame) -> list[str]:
-    """Find columns that correspond to the 7 days (by name containing weekday)."""
     found = []
     for day in WEEKDAYS:
         for col in df.columns:
@@ -41,7 +33,6 @@ def find_day_columns(df: pd.DataFrame) -> list[str]:
 
 
 def parse_time_slots(cell_value) -> set[str]:
-    """Parse a cell into a set of exact time-slot strings (comma/newline separated)."""
     if pd.isna(cell_value):
         return set()
     text = str(cell_value).strip()
@@ -53,11 +44,7 @@ def parse_time_slots(cell_value) -> set[str]:
 
 
 def build_master_schedule(df: pd.DataFrame, netid_col: str, day_cols: list[str]) -> dict[str, set[tuple[str, str]]]:
-    """
-    For each student (NetID), build a master schedule as set of (day, time_slot).
-    time_slot is the exact string (e.g. '4pm-5pm ET'); match only when identical.
-    """
-    schedules = {}
+schedules = {}
     for _, row in df.iterrows():
         netid = clean_netid(row.get(netid_col, ""))
         if not netid:
@@ -84,11 +71,7 @@ def greedy_group(
     max_group_size: int,
     min_common_slots: int = 1,
 ) -> tuple[list[tuple[list[str], set[tuple[str, str]]]], list[str]]:
-    """
-    Greedy grouping: form groups with size between min_group_size and max_group_size
-    (inclusive), each with at least min_common_slots common (day, time_slot).
-    Returns (groups, manual_review) where each group is (list of netids, common_slots).
-    """
+    
     if max_group_size < 1 or min_group_size > max_group_size:
         return [], list(schedules.keys())
 
@@ -106,7 +89,7 @@ def greedy_group(
         common = set(schedules[seed])
 
         while len(group_netids) < max_group_size and unplaced:
-            # Candidates: unplaced students with at least min_common_slots in common
+            # Candidates
             best_candidate = None
             best_intersection_size = min_common_slots - 1
 
@@ -122,7 +105,7 @@ def greedy_group(
             common = common & schedules[best_candidate]
             unplaced.remove(best_candidate)
 
-        # Accept group if size in [min, max] and has required overlap
+        # Accept group if size in [min, max]
         if (
             min_group_size <= len(group_netids) <= max_group_size
             and len(common) >= min_common_slots
@@ -140,12 +123,7 @@ def greedy_group_remainder(
     min_group_size: int,
     max_group_size: int,
 ) -> tuple[list[tuple[list[str], set[tuple[str, str]]]], list[str]]:
-    """
-    Best-effort grouping for remainder students: form groups of size [min, max]
-    with no minimum overlap required. Prefer candidates with more common slots.
-    Each student appears in at most one group (unique placement).
-    Returns (remainder_groups, still_unplaced).
-    """
+    
     if not netids or max_group_size < 1 or min_group_size > max_group_size:
         return [], list(netids)
 
@@ -180,7 +158,7 @@ def greedy_group_remainder(
 
 
 def format_common_slots(common: set[tuple[str, str]]) -> list[str]:
-    """Format common slots for display, e.g. 'Monday: 4pm-5pm ET'."""
+
     by_day: dict[str, list[str]] = {}
     for day, slot in sorted(common, key=lambda x: (WEEKDAYS.index(x[0]) if x[0] in WEEKDAYS else 99, x[1])):
         by_day.setdefault(day, []).append(slot)
@@ -192,7 +170,7 @@ def build_export_df(
     manual_review: list[str],
     remainder_groups: list[tuple[list[str], set[tuple[str, str]]]] | None = None,
 ) -> pd.DataFrame:
-    """Build a DataFrame for Final_Groups.csv: Group, NetID, In_Group, Common_Meeting_Times, Manual_Review."""
+
     rows = []
     for i, (members, common) in enumerate(groups, start=1):
         common_str = "; ".join(format_common_slots(common))
@@ -232,7 +210,7 @@ def run_app():
     st.markdown("Upload the **Form Responses** CSV. Groups are formed so that every member shares the **exact same** time-slot strings on the same day (e.g. \"4pm-5pm ET\").")
 
     uploaded = st.file_uploader("Upload Form Responses CSV", type=["csv"])
-    # Persist CSV in session so changing settings and re-running "Build groups" still has the data
+    # Persist CSV
     if uploaded is not None:
         try:
             df = pd.read_csv(uploaded)
@@ -340,7 +318,6 @@ def run_app():
         mime="text/csv",
     )
 
-    # --- Matchmake remainder students (option at the very end) ---
     st.divider()
     st.subheader("Matchmake remainder students")
     st.markdown("Try different **min/max group sizes** on the same remainder pool (no need to re-run Build groups). Each run uses the list below and shows a new grouping.")
@@ -394,7 +371,7 @@ def run_app():
                 st.session_state["remainder_run_done"] = True
                 st.rerun()
 
-        # Show result: either groups formed or "no matches available"
+        # Show result
         if has_remainder_results:
             st.success(f"Matchmaking complete. **{len(remainder_groups)}** remainder group(s) formed (min–max **{rem_min}–{rem_max}**). Change the numbers above and run again to try another scenario.")
             st.markdown("**Remainder groups (best-effort):**")
