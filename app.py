@@ -179,7 +179,7 @@ def build_export_df(
     manual_review: list[str],
     remainder_groups: list[tuple[list[str], set[tuple[str, str]]]] | None = None,
 ) -> pd.DataFrame:
-# Export FM
+# Export FM: one row per group, members in a single column
     rows = []
     # Only export groups with 2+ members; put singletons in manual review
     for i, (members, common) in enumerate(groups, start=1):
@@ -187,32 +187,30 @@ def build_export_df(
             manual_review = list(manual_review) + members
             continue
         common_str = "; ".join(format_common_slots(common))
-        for netid in members:
-            rows.append({
-                "Group": i,
-                "NetID": netid,
-                "In_Group": "Yes",
-                "Common_Meeting_Times": common_str,
-                "Manual_Review": "",
-            })
+        rows.append({
+            "Group": i,
+            "Members": ", ".join(members),
+            "In_Group": "Yes",
+            "Common_Meeting_Times": common_str,
+            "Manual_Review": "",
+        })
     if remainder_groups:
         for i, (members, common) in enumerate(remainder_groups, start=1):
             if len(members) < 2:
                 manual_review = list(manual_review) + members
                 continue
             common_str = "; ".join(format_common_slots(common))
-            for netid in members:
-                rows.append({
-                    "Group": f"Remainder {i}",
-                    "NetID": netid,
-                    "In_Group": "Yes (remainder)",
-                    "Common_Meeting_Times": common_str,
-                    "Manual_Review": "",
-                })
-    for netid in manual_review:
+            rows.append({
+                "Group": f"Remainder {i}",
+                "Members": ", ".join(members),
+                "In_Group": "Yes (remainder)",
+                "Common_Meeting_Times": common_str,
+                "Manual_Review": "",
+            })
+    if manual_review:
         rows.append({
-            "Group": "",
-            "NetID": netid,
+            "Group": "Manual Review",
+            "Members": ", ".join(manual_review),
             "In_Group": "No",
             "Common_Meeting_Times": "",
             "Manual_Review": "Yes",
