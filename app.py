@@ -228,6 +228,7 @@ def run_app():
         try:
             df = pd.read_csv(uploaded)
             st.session_state["form_csv_df"] = df
+            st.session_state["excluded_netids"] = set()  # reset exclusions on new upload
         except Exception as e:
             st.error(f"Could not read CSV: {e}")
             return
@@ -244,6 +245,28 @@ def run_app():
     day_cols = find_day_columns(df)
     if len(day_cols) < 7:
         st.warning(f"Found {len(day_cols)} day columns (expected 7). Columns used: {day_cols}")
+
+    # Unique NetIDs from CSV (for exclude list)
+    all_netids = sorted(
+        {clean_netid(row.get(netid_col, "")) for _, row in df.iterrows()}
+        - {""}
+    )
+    if "excluded_netids" not in st.session_state:
+        st.session_state["excluded_netids"] = set()
+    excluded_selected = st.multiselect(
+        "Remove people from matchmaking",
+        options=all_netids,
+        default=list(st.session_state["excluded_netids"]),
+        help="Select NetIDs to exclude. They will not be included in any groups.",
+    )
+    st.session_state["excluded_netids"] = set(excluded_selected)
+    if st.session_state["excluded_netids"]:
+        st.caption(f"Excluding {len(st.session_state['excluded_netids'])} person(s). Matchmaking will use the rest.")
+
+    # Use only non-excluded rows for matchmaking
+    df_matchmaking = df[
+        df[netid_col].apply(lambda x: clean_netid(x) not in st.session_state["excluded_netids"])
+    ].copy()
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -277,7 +300,7 @@ def run_app():
     if min_group_size > max_group_size:
         st.error("Min group size must be ≤ max group size.")
     elif st.button("Build groups"):
-        schedules = build_master_schedule(df, netid_col, day_cols)
+        schedules = build_master_schedule(df_matchmaking, netid_col, day_cols)
         if not schedules:
             st.warning("No valid NetIDs/schedules found after cleaning.")
             return
